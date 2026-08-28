@@ -1,0 +1,12 @@
+image:
+  repository: fogshaper/cassiopeia-frontend
+  tag: v2
+
+replicaCount: 1
+
+service:
+  port: 80
+
+route:
+  gatewayName: cassiopeia
+  hostname: cassiopeia.local

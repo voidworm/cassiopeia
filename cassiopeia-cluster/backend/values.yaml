@@ -1,0 +1,15 @@
+image:
+  repository: fogshaper/cassiopeia-backend
+  tag: v1
+
+replicaCount: 1
+
+service:
+  port: 8080
+
+postgres:
+  image: postgres:16-alpine
+  user: cassiopeia
+  password: cassiopeia
+  database: cassiopeia
+  storage: 1Gi
