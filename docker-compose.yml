@@ -1,0 +1,41 @@
+services:
+  cassiopeia-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cassiopeia
+      POSTGRES_PASSWORD: cassiopeia
+      POSTGRES_DB: cassiopeia
+    ports:
+      - "5432:5432"
+    volumes:
+      - cassiopeia-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cassiopeia"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  cassiopeia-backend:
+    build:
+      context: ./cassiopeia-backend
+    environment:
+      DATABASE_URL: postgres://cassiopeia:cassiopeia@cassiopeia-postgres:5432/cassiopeia?sslmode=disable
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      cassiopeia-postgres:
+        condition: service_healthy
+
+  cassiopeia-frontend:
+    build:
+      context: ./cassiopeia-frontend
+      args:
+        VITE_API_URL: http://localhost:8080
+    ports:
+      - "3000:80"
+    depends_on:
+      - cassiopeia-backend
+
+volumes:
+  cassiopeia-postgres-data:

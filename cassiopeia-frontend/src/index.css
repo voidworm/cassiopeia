@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Cormorant+Garamond:wght@600;700&display=swap');
+
+:root {
+  --text: #3b2e22;
+  --text-muted: #6b5847;
+  --bg: #f3e9d6;
+  --bg-panel: #ece0c8;
+  --border: #c9b78f;
+  --accent: #7a3b2e;
+  --accent-hover: #5f2e24;
+  --row-hover: #e9dcbf;
+
+  --serif: 'EB Garamond', 'Palatino Linotype', Georgia, serif;
+  --display: 'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+
+  font: 18px/150% var(--serif);
+  color: var(--text);
+  background: var(--bg);
+  background-image: radial-gradient(ellipse at top, rgba(122, 59, 46, 0.05), transparent 60%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6d9bf;
+    --text-muted: #b8a883;
+    --bg: #241c14;
+    --bg-panel: #2d2318;
+    --border: #4a3c28;
+    --accent: #c99b5f;
+    --accent-hover: #e0b47b;
+    --row-hover: #2f2519;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+h1 {
+  font-family: var(--display);
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin: 0 0 2px;
+}
+
+.subtitle {
+  margin: 0 0 32px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.error {
+  color: #a13a2f;
+}
+
+table.investigators {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+table.investigators th {
+  text-align: left;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 20px;
+  border-bottom: 2px solid var(--border);
+  padding: 10px 14px;
+}
+
+table.investigators td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+table.investigators tr:hover {
+  background: var(--row-hover);
+}
+
+.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+button {
+  font: inherit;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 3px;
+  padding: 6px 14px;
+  margin-left: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+button.secondary:hover {
+  background: var(--row-hover);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.admin-toggle {
+  margin: 20px 0 0;
+}
+
+.admin-input {
+  width: 70px;
+  font: inherit;
+  padding: 5px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  text-align: right;
+}
