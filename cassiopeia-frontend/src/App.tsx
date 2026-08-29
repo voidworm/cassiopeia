@@ -30,6 +30,8 @@ function useHashView() {
   return view
 }
 
+const PAGE_SIZE = 10
+
 function App() {
   const view = useHashView()
 
@@ -42,6 +44,26 @@ function App() {
 
   const [sortColumn, setSortColumn] = useState<SortColumn>('playCount')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+
+  const [hiddenClasses, setHiddenClasses] = useState<Set<number>>(new Set())
+  const [showAllInvestigators, setShowAllInvestigators] = useState(false)
+  const [showAllScenarios, setShowAllScenarios] = useState(false)
+
+  function toggleClass(classId: number) {
+    setHiddenClasses((prev) => {
+      const next = new Set(prev)
+      if (next.has(classId)) {
+        next.delete(classId)
+      } else {
+        next.add(classId)
+      }
+      return next
+    })
+  }
+
+  function toggleAllClasses() {
+    setHiddenClasses((prev) => (prev.size === 0 ? new Set(classes.map((c) => c.id)) : new Set()))
+  }
 
   useEffect(() => {
     Promise.all([fetchInvestigators(), fetchScenarios(), fetchClasses(), fetchCampaigns()])
@@ -61,6 +83,7 @@ function App() {
   }
 
   const classesById = new Map(classes.map((c) => [c.id, c]))
+  const campaignsById = new Map(campaigns.map((c) => [c.id, c]))
 
   function handleSort(column: SortColumn) {
     if (sortColumn === column) {
@@ -76,13 +99,18 @@ function App() {
     return <span className="sort-mark">{sortDirection === 'asc' ? '↑' : '↓'}</span>
   }
 
-  const sortedInvestigators = [...investigators].sort((a, b) => {
-    const result =
-      sortColumn === 'name' ? a.name.localeCompare(b.name) : a.playCount - b.playCount
-    return sortDirection === 'asc' ? result : -result
-  })
+  const sortedInvestigators = investigators
+    .filter((inv) => inv.classId === undefined || !hiddenClasses.has(inv.classId))
+    .sort((a, b) => {
+      const result =
+        sortColumn === 'name' ? a.name.localeCompare(b.name) : a.playCount - b.playCount
+      return sortDirection === 'asc' ? result : -result
+    })
 
   const sortedScenarios = [...scenarios].sort((a, b) => b.playCount - a.playCount || a.name.localeCompare(b.name))
+
+  const visibleInvestigators = showAllInvestigators ? sortedInvestigators : sortedInvestigators.slice(0, PAGE_SIZE)
+  const visibleScenarios = showAllScenarios ? sortedScenarios : sortedScenarios.slice(0, PAGE_SIZE)
 
   return (
     <div className="page">
@@ -93,6 +121,27 @@ function App() {
 
       {!loading && !error && (
         <>
+          <div className="class-filter">
+            <button
+              type="button"
+              className={`bookmark bookmark-all${hiddenClasses.size === 0 ? ' active' : ''}`}
+              onClick={toggleAllClasses}
+            >
+              All
+            </button>
+            {classes.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`bookmark${hiddenClasses.has(c.id) ? ' hidden' : ''}`}
+                style={{ backgroundColor: c.colour }}
+                onClick={() => toggleClass(c.id)}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+
           <table className="data-table">
             <thead>
               <tr>
@@ -105,11 +154,17 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {sortedInvestigators.map((inv) => (
+              {visibleInvestigators.map((inv) => (
                 <InvestigatorRow key={inv.id} investigator={inv} classesById={classesById} />
               ))}
             </tbody>
           </table>
+
+          {sortedInvestigators.length > PAGE_SIZE && (
+            <button type="button" className="show-more" onClick={() => setShowAllInvestigators((v) => !v)}>
+              {showAllInvestigators ? 'Show fewer' : `Show all ${sortedInvestigators.length}`}
+            </button>
+          )}
 
           <div className="section">
             <h2>Scenarios</h2>
@@ -121,11 +176,16 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {sortedScenarios.map((sc) => (
-                  <ScenarioRow key={sc.id} scenario={sc} />
+                {visibleScenarios.map((sc) => (
+                  <ScenarioRow key={sc.id} scenario={sc} campaignsById={campaignsById} />
                 ))}
               </tbody>
             </table>
+            {sortedScenarios.length > PAGE_SIZE && (
+              <button type="button" className="show-more" onClick={() => setShowAllScenarios((v) => !v)}>
+                {showAllScenarios ? 'Show fewer' : `Show all ${sortedScenarios.length}`}
+              </button>
+            )}
           </div>
 
           <a className="nav-link" href="#details">
