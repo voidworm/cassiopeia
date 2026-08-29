@@ -1,10 +1,12 @@
-FROM golang:1.23-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
 WORKDIR /src
 
 COPY go.mod ./
 COPY . .
 RUN go mod tidy
-RUN CGO_ENABLED=0 go build -o /out/cassiopeia-backend .
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/cassiopeia-backend .
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /out/cassiopeia-backend /cassiopeia-backend
