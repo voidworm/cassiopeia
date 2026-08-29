@@ -49,7 +49,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("cassiopeia-backend listening on :%s", port)
+		log.Printf("cassiopeia-backend is listening on :%s", port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
