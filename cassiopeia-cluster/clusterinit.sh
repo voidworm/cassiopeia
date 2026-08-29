@@ -24,5 +24,5 @@ kubectl -n argocd rollout restart deployment argocd-server
 kubectl apply -f "$SCRIPT_DIR/infra/argocd-route.yaml"
 
 #apply application for cassiopeia front/backend
-kubectl apply -f "$SCRIPT_DIR/argocd/backend.yaml"
-kubectl apply -f "$SCRIPT_DIR/argocd/frontend.yaml"
+kubectl apply -f "$SCRIPT_DIR/argocd/backend-application.yaml"
+kubectl apply -f "$SCRIPT_DIR/argocd/frontend-application.yaml"
