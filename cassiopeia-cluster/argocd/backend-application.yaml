@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cassiopeia-backend
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/voidworm/cassiopeia.git
+    targetRevision: main
+    path: cassiopeia-cluster/backend
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cassiopeia
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
