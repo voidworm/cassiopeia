@@ -39,8 +39,7 @@ function App() {
 
   return (
     <div className="page">
-      <h1>Arkham Archivist</h1>
-      <p className="subtitle">Investigators by play count</p>
+      <h1>arkham archivist</h1>
 
       {error && <p className="error">{error}</p>}
       {loading && <p>Loading…</p>}
@@ -49,7 +48,7 @@ function App() {
         <table className="investigators">
           <thead>
             <tr>
-              <th>Name</th>
+              <th>Investigator</th>
               <th>Play count</th>
               <th></th>
             </tr>

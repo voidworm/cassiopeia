@@ -47,13 +47,8 @@ h1 {
   font-size: 44px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin: 0 0 2px;
-}
-
-.subtitle {
   margin: 0 0 32px;
-  color: var(--text-muted);
-  font-style: italic;
+  text-align: center;
 }
 
 .error {
