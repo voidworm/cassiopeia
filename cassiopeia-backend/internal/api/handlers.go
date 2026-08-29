@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -56,8 +57,13 @@ func (s *Server) ListInvestigators(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetInvestigatorByID(w http.ResponseWriter, r *http.Request) {
-	uid := r.PathValue("uid")
-	inv, err := s.DB.GetInvestigatorByID(r.Context(), uid)
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid investigator id")
+		return
+	}
+
+	inv, err := s.DB.GetInvestigatorByID(r.Context(), id)
 	if err != nil {
 		if isNotFound(err) {
 			writeError(w, http.StatusNotFound, "investigator not found")
@@ -69,56 +75,71 @@ func (s *Server) GetInvestigatorByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, inv)
 }
 
-type incrementRequest struct {
-	By int `json:"by"`
-}
-
-func (s *Server) IncrementPlayCount(w http.ResponseWriter, r *http.Request) {
-	uid := r.PathValue("uid")
-
-	req := incrementRequest{By: 1}
-	if r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid request body")
-			return
-		}
-	}
-
-	inv, err := s.DB.IncrementPlayCount(r.Context(), uid, req.By)
+func (s *Server) ListClasses(w http.ResponseWriter, r *http.Request) {
+	classes, err := s.DB.ListClasses(r.Context())
 	if err != nil {
-		if isNotFound(err) {
-			writeError(w, http.StatusNotFound, "investigator not found")
-			return
-		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, inv)
-}
-
-type setRequest struct {
-	Value int `json:"value"`
-}
-
-func (s *Server) SetPlayCount(w http.ResponseWriter, r *http.Request) {
-	uid := r.PathValue("uid")
-
-	var req setRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
+	if classes == nil {
+		classes = []models.Class{}
 	}
+	writeJSON(w, http.StatusOK, classes)
+}
 
-	inv, err := s.DB.SetPlayCount(r.Context(), uid, req.Value)
+func (s *Server) ListCampaigns(w http.ResponseWriter, r *http.Request) {
+	campaigns, err := s.DB.ListCampaigns(r.Context())
 	if err != nil {
-		if isNotFound(err) {
-			writeError(w, http.StatusNotFound, "investigator not found")
-			return
-		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, inv)
+	if campaigns == nil {
+		campaigns = []models.Campaign{}
+	}
+	writeJSON(w, http.StatusOK, campaigns)
+}
+
+func (s *Server) ListScenarios(w http.ResponseWriter, r *http.Request) {
+	scenarios, err := s.DB.ListScenarios(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if scenarios == nil {
+		scenarios = []models.Scenario{}
+	}
+	writeJSON(w, http.StatusOK, scenarios)
+}
+
+func (s *Server) CountPlayedTogether(w http.ResponseWriter, r *http.Request) {
+	a, errA := strconv.Atoi(r.URL.Query().Get("a"))
+	b, errB := strconv.Atoi(r.URL.Query().Get("b"))
+	if errA != nil || errB != nil {
+		writeError(w, http.StatusBadRequest, "query params 'a' and 'b' must be investigator ids")
+		return
+	}
+
+	count, err := s.DB.CountPlayedTogether(r.Context(), a, b)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"count": count})
+}
+
+func (s *Server) CountPlaysByClass(w http.ResponseWriter, r *http.Request) {
+	classID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid class id")
+		return
+	}
+
+	count, err := s.DB.CountPlaysByClass(r.Context(), classID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"count": count})
 }
 
 func (s *Server) Healthz(w http.ResponseWriter, r *http.Request) {

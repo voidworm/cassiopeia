@@ -1,7 +1,26 @@
 export type Investigator = {
-  uid: string
+  id: number
   name: string
+  classId?: number
   playCount: number
+}
+
+export type Scenario = {
+  id: number
+  name: string
+  campaignId?: number
+  playCount: number
+}
+
+export type ClassInfo = {
+  id: number
+  name: string
+  colour?: string
+}
+
+export type Campaign = {
+  id: number
+  name: string
 }
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
@@ -18,18 +37,14 @@ export function fetchInvestigators(): Promise<Investigator[]> {
   return fetch(`${API_URL}/api/investigators`).then((res) => handle(res))
 }
 
-export function incrementPlayCount(uid: string, by = 1): Promise<Investigator> {
-  return fetch(`${API_URL}/api/investigators/${uid}/increment`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ by }),
-  }).then((res) => handle(res))
+export function fetchScenarios(): Promise<Scenario[]> {
+  return fetch(`${API_URL}/api/scenarios`).then((res) => handle(res))
 }
 
-export function setPlayCount(uid: string, value: number): Promise<Investigator> {
-  return fetch(`${API_URL}/api/investigators/${uid}/set`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value }),
-  }).then((res) => handle(res))
+export function fetchClasses(): Promise<ClassInfo[]> {
+  return fetch(`${API_URL}/api/classes`).then((res) => handle(res))
+}
+
+export function fetchCampaigns(): Promise<Campaign[]> {
+  return fetch(`${API_URL}/api/campaigns`).then((res) => handle(res))
 }

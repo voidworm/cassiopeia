@@ -1,7 +1,8 @@
 package models
 
 type Investigator struct {
-	UID       string `json:"uid"`
+	ID        int    `json:"id"`
 	Name      string `json:"name"`
+	ClassID   *int   `json:"classId,omitempty"`
 	PlayCount int    `json:"playCount"`
 }

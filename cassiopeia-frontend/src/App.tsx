@@ -1,34 +1,66 @@
 import { useEffect, useState } from 'react'
-import { fetchInvestigators, incrementPlayCount, setPlayCount, type Investigator } from './api'
+import {
+  fetchCampaigns,
+  fetchClasses,
+  fetchInvestigators,
+  fetchScenarios,
+  type Campaign,
+  type ClassInfo,
+  type Investigator,
+  type Scenario,
+} from './api'
 import { InvestigatorRow } from './InvestigatorRow'
+import { ScenarioRow } from './ScenarioRow'
+import { DetailsPage } from './DetailsPage'
 
 type SortColumn = 'name' | 'playCount'
 type SortDirection = 'asc' | 'desc'
 
+function useHashView() {
+  const [view, setView] = useState(() => (window.location.hash === '#details' ? 'details' : 'home'))
+
+  useEffect(() => {
+    function onHashChange() {
+      setView(window.location.hash === '#details' ? 'details' : 'home')
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  return view
+}
+
 function App() {
+  const view = useHashView()
+
   const [investigators, setInvestigators] = useState<Investigator[]>([])
+  const [scenarios, setScenarios] = useState<Scenario[]>([])
+  const [classes, setClasses] = useState<ClassInfo[]>([])
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [adminMode, setAdminMode] = useState(false)
+
   const [sortColumn, setSortColumn] = useState<SortColumn>('playCount')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
-  function load() {
-    setLoading(true)
-    fetchInvestigators()
-      .then((data) => {
-        setInvestigators(data)
+  useEffect(() => {
+    Promise.all([fetchInvestigators(), fetchScenarios(), fetchClasses(), fetchCampaigns()])
+      .then(([inv, scen, cls, camp]) => {
+        setInvestigators(inv)
+        setScenarios(scen)
+        setClasses(cls)
+        setCampaigns(camp)
         setError(null)
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
+  }, [])
+
+  if (view === 'details') {
+    return <DetailsPage classes={classes} campaigns={campaigns} scenarios={scenarios} />
   }
 
-  useEffect(load, [])
-
-  function applyUpdate(updated: Investigator) {
-    setInvestigators((prev) => prev.map((inv) => (inv.uid === updated.uid ? updated : inv)))
-  }
+  const classesById = new Map(classes.map((c) => [c.id, c]))
 
   function handleSort(column: SortColumn) {
     if (sortColumn === column) {
@@ -50,13 +82,7 @@ function App() {
     return sortDirection === 'asc' ? result : -result
   })
 
-  async function handleIncrement(uid: string) {
-    applyUpdate(await incrementPlayCount(uid, 1))
-  }
-
-  async function handleSet(uid: string, value: number) {
-    applyUpdate(await setPlayCount(uid, value))
-  }
+  const sortedScenarios = [...scenarios].sort((a, b) => b.playCount - a.playCount || a.name.localeCompare(b.name))
 
   return (
     <div className="page">
@@ -66,36 +92,46 @@ function App() {
       {loading && <p>Loading…</p>}
 
       {!loading && !error && (
-        <table className="investigators">
-          <thead>
-            <tr>
-              <th className="sortable" onClick={() => handleSort('name')}>
-                Investigator{sortMark('name')}
-              </th>
-              <th className="sortable" onClick={() => handleSort('playCount')}>
-                Play count{sortMark('playCount')}
-              </th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedInvestigators.map((inv) => (
-              <InvestigatorRow
-                key={inv.uid}
-                investigator={inv}
-                adminMode={adminMode}
-                onIncrement={handleIncrement}
-                onSet={handleSet}
-              />
-            ))}
-          </tbody>
-        </table>
-      )}
+        <>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th className="sortable" onClick={() => handleSort('name')}>
+                  Investigator{sortMark('name')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('playCount')}>
+                  Play count{sortMark('playCount')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedInvestigators.map((inv) => (
+                <InvestigatorRow key={inv.id} investigator={inv} classesById={classesById} />
+              ))}
+            </tbody>
+          </table>
 
-      {!loading && !error && (
-        <button className="admin-toggle secondary" onClick={() => setAdminMode((v) => !v)}>
-          {adminMode ? 'Done' : 'Admin'}
-        </button>
+          <div className="section">
+            <h2>Scenarios</h2>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Play count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedScenarios.map((sc) => (
+                  <ScenarioRow key={sc.id} scenario={sc} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <a className="nav-link" href="#details">
+            View classes, campaigns &amp; scenarios →
+          </a>
+        </>
       )}
     </div>
   )

@@ -36,8 +36,8 @@ func main() {
 	if err := database.Migrate(ctx); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
-	if err := database.SeedIfEmpty(ctx); err != nil {
-		log.Fatalf("failed to seed database: %v", err)
+	if err := database.PreseedIfEmpty(ctx); err != nil {
+		log.Fatalf("failed to preseed database: %v", err)
 	}
 
 	server := &api.Server{DB: database}
