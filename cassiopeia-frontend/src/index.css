@@ -71,6 +71,21 @@ table.investigators th {
   padding: 10px 14px;
 }
 
+table.investigators th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sort-mark {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--accent);
+}
+
 table.investigators td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
