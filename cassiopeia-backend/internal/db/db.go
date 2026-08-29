@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -31,26 +32,26 @@ func (d *DB) Close() {
 func (d *DB) Migrate(ctx context.Context) error {
 	statements := []string{
 		`CREATE TABLE IF NOT EXISTS classes (
-			class_id INT PRIMARY KEY,
-			name     VARCHAR(255) NOT NULL,
+			class_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+			name     VARCHAR(255) NOT NULL UNIQUE,
 			colour   VARCHAR(255)
 		)`,
 		`CREATE TABLE IF NOT EXISTS investigators (
-			investigator_id INT PRIMARY KEY,
-			name            VARCHAR(255) NOT NULL,
+			investigator_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+			name            VARCHAR(255) NOT NULL UNIQUE,
 			class_id        INT REFERENCES classes(class_id)
 		)`,
 		`CREATE TABLE IF NOT EXISTS campaigns (
-			campaign_id INT PRIMARY KEY,
-			name        VARCHAR(255) NOT NULL
+			campaign_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+			name        VARCHAR(255) NOT NULL UNIQUE
 		)`,
 		`CREATE TABLE IF NOT EXISTS scenarios (
-			scenario_id INT PRIMARY KEY,
-			name        VARCHAR(255) NOT NULL,
+			scenario_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+			name        VARCHAR(255) NOT NULL UNIQUE,
 			campaign_id INT REFERENCES campaigns(campaign_id)
 		)`,
 		`CREATE TABLE IF NOT EXISTS sessions (
-			session_id        INT PRIMARY KEY,
+			session_id        INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 			scenario_id       INT REFERENCES scenarios(scenario_id),
 			session_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -68,45 +69,92 @@ func (d *DB) Migrate(ctx context.Context) error {
 	return nil
 }
 
-// PreseedIfEmpty inserts a small, plain set of rows across all tables so the
-// app has something to show. This is a placeholder until proper seed jobs
-// are in place.
-func (d *DB) PreseedIfEmpty(ctx context.Context) error {
-	var count int
-	if err := d.pool.QueryRow(ctx, `SELECT COUNT(*) FROM investigators`).Scan(&count); err != nil {
+// SeedInitial inserts the static reference data (classes, investigators,
+// campaigns, scenarios) that is identical across every environment, from the
+// CSVs embedded under internal/db/seed/. It never touches
+// sessions/session_players, since those are play data. Every insert is
+// ON CONFLICT (name) DO NOTHING, so re-running is harmless.
+func (d *DB) SeedInitial(ctx context.Context) error {
+	classes, err := readSeedCSV("classes.csv")
+	if err != nil {
 		return err
 	}
-	if count > 0 {
-		return nil
-	}
-
-	statements := []struct {
-		sql  string
-		args []any
-	}{
-		{`INSERT INTO classes (class_id, name, colour) VALUES ($1, $2, $3)`, []any{1, "Guardian", "#2b6cb0"}},
-		{`INSERT INTO classes (class_id, name, colour) VALUES ($1, $2, $3)`, []any{2, "Seeker", "#d69e2e"}},
-
-		{`INSERT INTO investigators (investigator_id, name, class_id) VALUES ($1, $2, $3)`, []any{1, "Daisy Walker", 2}},
-		{`INSERT INTO investigators (investigator_id, name, class_id) VALUES ($1, $2, $3)`, []any{2, "Roland Banks", 1}},
-		{`INSERT INTO investigators (investigator_id, name, class_id) VALUES ($1, $2, $3)`, []any{3, "Mark Harrigan", 1}},
-
-		{`INSERT INTO campaigns (campaign_id, name) VALUES ($1, $2)`, []any{1, "Night of the Zealot"}},
-
-		{`INSERT INTO scenarios (scenario_id, name, campaign_id) VALUES ($1, $2, $3)`, []any{1, "The Gathering", 1}},
-		{`INSERT INTO scenarios (scenario_id, name, campaign_id) VALUES ($1, $2, $3)`, []any{2, "The Midnight Masks", 1}},
-
-		{`INSERT INTO sessions (session_id, scenario_id) VALUES ($1, $2)`, []any{1, 1}},
-		{`INSERT INTO sessions (session_id, scenario_id) VALUES ($1, $2)`, []any{2, 2}},
-
-		{`INSERT INTO session_players (session_id, investigator_id) VALUES ($1, $2)`, []any{1, 1}},
-		{`INSERT INTO session_players (session_id, investigator_id) VALUES ($1, $2)`, []any{1, 2}},
-		{`INSERT INTO session_players (session_id, investigator_id) VALUES ($1, $2)`, []any{2, 1}},
-		{`INSERT INTO session_players (session_id, investigator_id) VALUES ($1, $2)`, []any{2, 3}},
-	}
-	for _, s := range statements {
-		if _, err := d.pool.Exec(ctx, s.sql, s.args...); err != nil {
+	for _, row := range classes {
+		if _, err := d.pool.Exec(ctx,
+			`INSERT INTO classes (name, colour) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING`,
+			row[0], row[1],
+		); err != nil {
 			return err
+		}
+	}
+
+	investigators, err := readSeedCSV("investigators.csv")
+	if err != nil {
+		return err
+	}
+	for _, row := range investigators {
+		if _, err := d.pool.Exec(ctx,
+			`INSERT INTO investigators (name, class_id) VALUES ($1, (SELECT class_id FROM classes WHERE name = $2)) ON CONFLICT (name) DO NOTHING`,
+			row[0], row[1],
+		); err != nil {
+			return err
+		}
+	}
+
+	campaigns, err := readSeedCSV("campaigns.csv")
+	if err != nil {
+		return err
+	}
+	for _, row := range campaigns {
+		if _, err := d.pool.Exec(ctx,
+			`INSERT INTO campaigns (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`,
+			row[0],
+		); err != nil {
+			return err
+		}
+	}
+
+	scenarios, err := readSeedCSV("scenarios.csv")
+	if err != nil {
+		return err
+	}
+	for _, row := range scenarios {
+		if _, err := d.pool.Exec(ctx,
+			`INSERT INTO scenarios (name, campaign_id) VALUES ($1, (SELECT campaign_id FROM campaigns WHERE name = $2)) ON CONFLICT (name) DO NOTHING`,
+			row[0], row[1],
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SeedPersonal inserts play data (sessions/session_players) from
+// internal/db/seed/personal-sessions.csv. Not idempotent — sessions have no
+// natural unique key, so re-running this duplicates sessions.
+func (d *DB) SeedPersonal(ctx context.Context) error {
+	rows, err := readSeedCSV("personal-sessions.csv")
+	if err != nil {
+		return err
+	}
+	for _, row := range rows {
+		scenario, players := row[0], strings.Split(row[1], ";")
+
+		var sessionID int
+		err := d.pool.QueryRow(ctx,
+			`INSERT INTO sessions (scenario_id) VALUES ((SELECT scenario_id FROM scenarios WHERE name = $1)) RETURNING session_id`,
+			scenario,
+		).Scan(&sessionID)
+		if err != nil {
+			return err
+		}
+		for _, player := range players {
+			if _, err := d.pool.Exec(ctx,
+				`INSERT INTO session_players (session_id, investigator_id) VALUES ($1, (SELECT investigator_id FROM investigators WHERE name = $2))`,
+				sessionID, player,
+			); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

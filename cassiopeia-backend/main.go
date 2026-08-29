@@ -21,6 +21,11 @@ func getenv(key, fallback string) string {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "seed" {
+		runSeed(os.Args[2:])
+		return
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -35,9 +40,6 @@ func main() {
 
 	if err := database.Migrate(ctx); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
-	}
-	if err := database.PreseedIfEmpty(ctx); err != nil {
-		log.Fatalf("failed to preseed database: %v", err)
 	}
 
 	server := &api.Server{DB: database}
@@ -59,6 +61,42 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_ = httpServer.Shutdown(shutdownCtx)
+}
+
+// runSeed is the entrypoint for the `cassiopeia-backend seed <initial|personal>`
+// CLI invocation used by the initial-seed Helm hook Job and the local
+// personal-seed Job (see cassiopeia-cluster/backend).
+func runSeed(args []string) {
+	if len(args) != 1 || (args[0] != "initial" && args[0] != "personal") {
+		log.Fatalf("usage: cassiopeia-backend seed [initial|personal]")
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	connString := getenv("DATABASE_URL", "postgres://cassiopeia:cassiopeia@localhost:5432/cassiopeia?sslmode=disable")
+
+	database, err := connectWithRetry(ctx, connString)
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+	defer database.Close()
+
+	if err := database.Migrate(ctx); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
+
+	switch args[0] {
+	case "initial":
+		if err := database.SeedInitial(ctx); err != nil {
+			log.Fatalf("failed to run initial seed: %v", err)
+		}
+	case "personal":
+		if err := database.SeedPersonal(ctx); err != nil {
+			log.Fatalf("failed to run personal seed: %v", err)
+		}
+	}
+	log.Printf("seed %s complete", args[0])
 }
 
 func connectWithRetry(ctx context.Context, connString string) (*db.DB, error) {
