@@ -40,7 +40,7 @@ export function InvestigatorRow({ investigator, adminMode, onIncrement, onSet }:
             onKeyDown={(e) => e.key === 'Enter' && commit()}
           />
         ) : (
-          <button onClick={() => onIncrement(investigator.uid)}>+1</button>
+          <button onClick={() => onIncrement(investigator.uid)}>+</button>
         )}
       </td>
     </tr>

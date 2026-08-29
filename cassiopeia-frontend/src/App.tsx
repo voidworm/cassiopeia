@@ -39,7 +39,7 @@ function App() {
 
   return (
     <div className="page">
-      <h1>Cassiopeia</h1>
+      <h1>Arkham Archivist</h1>
       <p className="subtitle">Investigators by play count</p>
 
       {error && <p className="error">{error}</p>}
