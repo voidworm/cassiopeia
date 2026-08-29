@@ -1,6 +1,6 @@
 image:
   repository: fogshaper/cassiopeia-frontend
-  tag: v5
+  tag: v6
 
 replicaCount: 1
 
