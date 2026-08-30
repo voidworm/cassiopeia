@@ -130,9 +130,18 @@ func (d *DB) SeedInitial(ctx context.Context) error {
 }
 
 // SeedPersonal inserts play data (sessions/session_players) from
-// internal/db/seed/personal-sessions.csv. Not idempotent — sessions have no
-// natural unique key, so re-running this duplicates sessions.
+// internal/db/seed/personal-sessions.csv. Sessions have no natural unique
+// key, so this guards against re-running by skipping entirely if the
+// sessions table is already non-empty.
 func (d *DB) SeedPersonal(ctx context.Context) error {
+	var count int
+	if err := d.pool.QueryRow(ctx, `SELECT COUNT(*) FROM sessions`).Scan(&count); err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
 	rows, err := readSeedCSV("personal-sessions.csv")
 	if err != nil {
 		return err
