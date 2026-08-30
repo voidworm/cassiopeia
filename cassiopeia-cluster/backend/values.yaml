@@ -13,3 +13,15 @@ postgres:
   password: cassiopeia
   database: cassiopeia
   storage: 1Gi
+
+# When enabled, postgres credentials come from an ExternalSecret backed by
+# OpenBao instead of the plaintext values above. Requires the external-secrets
+# operator and a ClusterSecretStore named `secretStoreName` to already exist
+# in the cluster (see cassiopeia-cluster/infra/openbao.yaml). Left disabled by
+# default so this chart still installs standalone (e.g. plain kind cluster,
+# no OpenBao/ESO) without any extra setup.
+externalSecrets:
+  enabled: false
+  secretStoreName: openbao
+  remoteKey: secret/cassiopeia/postgres
+  refreshInterval: 1h

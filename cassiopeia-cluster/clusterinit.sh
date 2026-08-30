@@ -11,6 +11,15 @@ kubectl apply -f "$SCRIPT_DIR/infra/traefik.yaml"
 #setup gatewayclass & gateway
 kubectl apply -f "$SCRIPT_DIR/infra/gateway.yaml"
 
+#setup external-secrets operator (CRDs incl. ClusterSecretStore/ExternalSecret)
+helm repo add external-secrets https://charts.external-secrets.io >/dev/null
+helm repo update external-secrets >/dev/null
+helm upgrade --install external-secrets external-secrets/external-secrets \
+  -n external-secrets --create-namespace --wait
+
+#setup openbao (dev mode) + seed job + ClusterSecretStore pointing ESO at it
+kubectl apply -f "$SCRIPT_DIR/infra/openbao.yaml"
+
 #setup argo
 #apply argo root deployment
 kubectl apply --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml -n argocd

@@ -19,8 +19,28 @@ spec:
           ports:
             - containerPort: 8080
           env:
+{{- if .Values.externalSecrets.enabled }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: cassiopeia-backend-db
+                  key: user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cassiopeia-backend-db
+                  key: password
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: cassiopeia-backend-db
+                  key: database
+            - name: DATABASE_URL
+              value: "postgres://$(DB_USER):$(DB_PASSWORD)@cassiopeia-postgres:5432/$(DB_NAME)?sslmode=disable"
+{{- else }}
             - name: DATABASE_URL
               value: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@cassiopeia-postgres:5432/{{ .Values.postgres.database }}?sslmode=disable"
+{{- end }}
             - name: PORT
               value: "8080"
           readinessProbe:

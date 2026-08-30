@@ -1,0 +1,132 @@
+# Dev-mode OpenBao + ESO wiring for the local kind cluster.
+# NOT production-grade: dev-mode is in-memory (data is lost on restart) and
+# uses a static root token for ESO auth instead of the kubernetes auth method.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openbao
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openbao
+  namespace: openbao
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openbao
+  namespace: openbao
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openbao
+  template:
+    metadata:
+      labels:
+        app: openbao
+    spec:
+      serviceAccountName: openbao
+      containers:
+        - name: openbao
+          image: openbao/openbao:2.1
+          args:
+            - server
+            - -dev
+            - -dev-root-token-id=root
+            - -dev-listen-address=0.0.0.0:8200
+          ports:
+            - name: http
+              containerPort: 8200
+          env:
+            - name: BAO_ADDR
+              value: http://127.0.0.1:8200
+          securityContext:
+            capabilities:
+              add: ["IPC_LOCK"]
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health?standbyok=true
+              port: 8200
+            initialDelaySeconds: 3
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openbao
+  namespace: openbao
+spec:
+  selector:
+    app: openbao
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200
+---
+# Static dev-root-token used by ESO to authenticate against OpenBao.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openbao-token
+  namespace: openbao
+type: Opaque
+stringData:
+  token: root
+---
+# One-shot seed of the postgres credentials the backend chart's
+# ExternalSecret expects at secret/cassiopeia/postgres.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: openbao-seed
+  namespace: openbao
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: openbao/openbao:2.1
+          env:
+            - name: BAO_ADDR
+              value: http://openbao.openbao.svc.cluster.local:8200
+            - name: BAO_TOKEN
+              value: root
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              until bao status >/dev/null 2>&1; do
+                echo "waiting for openbao..."
+                sleep 2
+              done
+              bao secrets enable -path=secret kv-v2 2>/dev/null || true
+              bao kv put secret/cassiopeia/postgres \
+                user=cassiopeia \
+                password=cassiopeia \
+                database=cassiopeia
+---
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: openbao
+spec:
+  provider:
+    vault:
+      server: "http://openbao.openbao.svc.cluster.local:8200"
+      path: "secret"
+      version: "v2"
+      auth:
+        tokenSecretRef:
+          name: openbao-token
+          namespace: openbao
+          key: token
+# No HTTPRoute: the official openbao/openbao image ships without the UI
+# compiled in ("UI is not available in this binary"), so there's nothing to
+# browse to. Use the CLI/API instead, e.g.:
+#   kubectl -n openbao port-forward svc/openbao 8200:8200
+#   BAO_ADDR=http://127.0.0.1:8200 BAO_TOKEN=root bao kv get secret/cassiopeia/postgres
