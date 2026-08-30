@@ -1,0 +1,51 @@
+name: Republish Backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - id: version
+        name: Compute next version
+        run: |
+          CURRENT=$(grep 'tag:' cassiopeia-cluster/backend/values.yaml | awk '{print $2}')
+          NUM=${CURRENT#v}
+          NEXT="v$((NUM + 1))"
+          echo "Bumping backend $CURRENT -> $NEXT"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./cassiopeia-backend
+          push: true
+          provenance: false
+          platforms: linux/amd64,linux/arm64
+          tags: fogshaper/cassiopeia-backend:${{ steps.version.outputs.next }}
+
+      - name: Bump values.yaml and commit
+        run: |
+          sed -i "s/tag: .*/tag: ${{ steps.version.outputs.next }}/" cassiopeia-cluster/backend/values.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cassiopeia-cluster/backend/values.yaml
+          git commit -m "chore(backend): bump image tag to ${{ steps.version.outputs.next }}"
+          git pull --rebase origin main
+          git push origin HEAD:main
