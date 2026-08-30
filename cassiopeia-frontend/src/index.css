@@ -47,8 +47,211 @@ h1 {
   font-size: 44px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin: 0 0 32px;
+  margin: 0;
   text-align: center;
+}
+
+.page-header {
+  position: relative;
+  margin: 0 0 32px;
+}
+
+.add-session-button {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--accent);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: filter 0.15s ease;
+}
+
+.add-session-button:hover {
+  filter: brightness(1.1);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modal h2 {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+.modal-label {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15px;
+  margin: 16px 0 8px;
+}
+
+.combobox {
+  position: relative;
+  flex: 1;
+}
+
+.combobox-input {
+  width: 100%;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.combobox-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+
+.combobox-group-label {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 6px 10px 2px;
+}
+
+.combobox-option {
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.combobox-option:hover {
+  background: var(--row-hover);
+}
+
+.combobox-option.selected {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.combobox-empty {
+  padding: 8px 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.investigator-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.investigator-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slot-remove {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.slot-remove:hover {
+  background: var(--row-hover);
+}
+
+.add-investigator {
+  display: block;
+  margin-top: 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--accent);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.add-investigator:hover {
+  color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.modal-button {
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.modal-cancel {
+  background: none;
+  color: var(--text);
+}
+
+.modal-save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.modal-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .error {
@@ -114,6 +317,24 @@ table.data-table tr:hover {
   font-size: 28px;
   font-weight: 600;
   margin: 0 0 12px;
+}
+
+.table-filter {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-panel);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.table-filter::placeholder {
+  color: var(--text-muted);
 }
 
 .class-filter {

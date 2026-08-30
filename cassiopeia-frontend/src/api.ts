@@ -48,3 +48,17 @@ export function fetchClasses(): Promise<ClassInfo[]> {
 export function fetchCampaigns(): Promise<Campaign[]> {
   return fetch(`${API_URL}/api/campaigns`).then((res) => handle(res))
 }
+
+export type Session = {
+  id: number
+  scenarioId?: number
+  timestamp: string
+}
+
+export function createSession(scenarioId: number, investigatorIds: number[]): Promise<Session> {
+  return fetch(`${API_URL}/api/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenarioId, investigatorIds }),
+  }).then((res) => handle(res))
+}

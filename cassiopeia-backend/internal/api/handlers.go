@@ -142,6 +142,35 @@ func (s *Server) CountPlaysByClass(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]int{"count": count})
 }
 
+type createSessionRequest struct {
+	ScenarioID      int   `json:"scenarioId"`
+	InvestigatorIDs []int `json:"investigatorIds"`
+}
+
+func (s *Server) CreateSession(w http.ResponseWriter, r *http.Request) {
+	var req createSessionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.ScenarioID == 0 {
+		writeError(w, http.StatusBadRequest, "scenarioId is required")
+		return
+	}
+	if len(req.InvestigatorIDs) < 1 || len(req.InvestigatorIDs) > 4 {
+		writeError(w, http.StatusBadRequest, "must select between 1 and 4 investigators")
+		return
+	}
+
+	session, err := s.DB.CreateSession(r.Context(), req.ScenarioID, req.InvestigatorIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, session)
+}
+
 func (s *Server) Healthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

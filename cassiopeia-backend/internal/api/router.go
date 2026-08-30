@@ -26,6 +26,7 @@ func NewRouter(s *Server) http.Handler {
 	mux.HandleFunc("GET /api/classes", s.ListClasses)
 	mux.HandleFunc("GET /api/classes/{id}/playcount", s.CountPlaysByClass)
 	mux.HandleFunc("GET /api/campaigns", s.ListCampaigns)
+	mux.HandleFunc("POST /api/sessions", s.CreateSession)
 
 	return withCORS(mux)
 }

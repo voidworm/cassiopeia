@@ -280,6 +280,37 @@ func (d *DB) CountPlayedTogether(ctx context.Context, investigatorAID, investiga
 	return count, err
 }
 
+// CreateSession inserts a new play session with its participating investigators.
+func (d *DB) CreateSession(ctx context.Context, scenarioID int, investigatorIDs []int) (*models.Session, error) {
+	tx, err := d.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	var session models.Session
+	if err := tx.QueryRow(ctx,
+		`INSERT INTO sessions (scenario_id) VALUES ($1) RETURNING session_id, scenario_id, session_timestamp`,
+		scenarioID,
+	).Scan(&session.ID, &session.ScenarioID, &session.Timestamp); err != nil {
+		return nil, err
+	}
+
+	for _, invID := range investigatorIDs {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO session_players (session_id, investigator_id) VALUES ($1, $2)`,
+			session.ID, invID,
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return &session, nil
+}
+
 // CountPlaysByClass returns how many session_players rows belong to investigators of the given class.
 func (d *DB) CountPlaysByClass(ctx context.Context, classID int) (int, error) {
 	var count int
